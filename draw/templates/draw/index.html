@@ -19,6 +19,9 @@
     <canvas id="myCanvas" width="750px" height="750px"></canvas>
 </body>
 <script>
+    var colors = ['red','black', 'blue', 'yellow', 'green', 'orange', 'purple', 'pink']
+    var id = Math.random();
+    console.log(id);
 
     // setting up the canvas and one paper tool
     var canvas = document.getElementById('myCanvas');
@@ -27,9 +30,59 @@
 
     // getting the URL (you may want to use for Exercise 3)
     var url = window.location.href;
+    var socket = new WebSocket(
+        'wss://project3-emilyxiao231877.codeanyapp.com/ws/draw');
+      
+    
+    var path = new paper.Path();
+    var colorindex = Math.floor(Math.random()*colors.length);
+    path.strokeColor = colors[colorindex];
+  
+    var paths = {
+      id: path
+    }
+  
+    tool.onMouseMove = function(event) {
+        // Create a new path every time the mouse is clicked
+        path.add(event.point);
+        var data = {
+          "id": id,
+          "x": event.point.x,
+          "y": event.point.y,
+          "color": colorindex
+        }
 
-    // var socket = new WebSocket(
-    //     'wss://<your url here>/ws/draw');
+        setTimeout(function() { 
+          socket.send(JSON.stringify(data));
+        }, 50);
+    
+    }
+    
+    socket.onmessage = function(received) {
+        var got = JSON.parse(received.data);
+        console.log(got);
+        
+        var idd = JSON.parse(got["id"]);
+        console.log(idd);
+      
+        var x = JSON.parse(got["x"]);
+        var y = JSON.parse(got["y"]);
+        var color = JSON.parse(got["color"]);
+      
+        var p = new paper.Point(x, y);
+      
+        if (idd in paths) {
+          paths[idd].add(p);
+        } else {
+          paths[idd] = new paper.Path();
+          paths[idd].strokeColor = colors[color];
+          console.log(paths[idd].strokeColor);
+          paths[idd].add(p);
+        }     
+      
+    }
+    
+    
 
 
 </script>
