@@ -20,8 +20,8 @@
 </body>
 <script>
     var colors = ['red','black', 'blue', 'yellow', 'green', 'orange', 'purple', 'pink']
-    var id = Math.random();
-    console.log(id);
+    var paths = {
+      }
 
     // setting up the canvas and one paper tool
     var canvas = document.getElementById('myCanvas');
@@ -30,55 +30,130 @@
 
     // getting the URL (you may want to use for Exercise 3)
     var url = window.location.href;
+  
+    const params = new URLSearchParams(window.location.search);  
+    const size = params.get("size");  
+    console.log(size);
+  
     var socket = new WebSocket(
         'wss://project3-emilyxiao231877.codeanyapp.com/ws/draw');
       
-    
-    var path = new paper.Path();
-    var colorindex = Math.floor(Math.random()*colors.length);
-    path.strokeColor = colors[colorindex];
+    //citation: https://www.raymondcamden.com/2017/04/25/using-device-motion-on-the-web
+    let lastX, lastY, lastZ;
+    let moveCounter = 0;
+
+    function motion(e) {
+      let acc = e.acceleration;
+      if(!acc.hasOwnProperty('x')) {
+        acc = e.accelerationIncludingGravity;
+      }
+
+	    if(!acc.x) return;
   
-    var paths = {
-      id: path
-    }
-  
-    tool.onMouseMove = function(event) {
-        // Create a new path every time the mouse is clicked
-        path.add(event.point);
-        var data = {
-          "id": id,
-          "x": event.point.x,
-          "y": event.point.y,
-          "color": colorindex
+      if(Math.abs(acc.x) >= 1 &&
+        Math.abs(acc.y) >= 1 &&
+        Math.abs(acc.z) >=1) {
+        if(!lastX) {
+          lastX = acc.x;
+          lastY = acc.y;
+          lastZ = acc.z;
+          return;
         }
 
-        setTimeout(function() { 
-          socket.send(JSON.stringify(data));
-        }, 50);
-    
+        let deltaX = Math.abs(acc.x - lastX);
+        let deltaY = Math.abs(acc.y - lastY);
+        let deltaZ = Math.abs(acc.z - lastZ);
+
+        if(deltaX + deltaY + deltaZ > 5) {
+          moveCounter++;
+        } else {
+          moveCounter = Math.max(0, --moveCounter);
+        }
+
+        if(moveCounter > 4) {
+          paper.project.activeLayer.removeChildren();
+          moveCounter = 0;
+        }
+
+        lastX = acc.x;
+        lastY = acc.y;
+        lastZ = acc.z;
+
+      }
     }
     
-    socket.onmessage = function(received) {
-        var got = JSON.parse(received.data);
-        console.log(got);
-        
-        var idd = JSON.parse(got["id"]);
-        console.log(idd);
+    
+    if (size == "large") {
       
-        var x = JSON.parse(got["x"]);
-        var y = JSON.parse(got["y"]);
-        var color = JSON.parse(got["color"]);
+      socket.onmessage = function(received) {
+          var got = JSON.parse(received.data);
+          console.log(got);
+
+          var idd = JSON.parse(got["id"]);
+          console.log(idd);
+
+          var x = JSON.parse(got["x"]);
+          var y = JSON.parse(got["y"]);
+          var color = JSON.parse(got["color"]);
+
+          var p = new paper.Point(x, y);
+
+          if (idd in paths) {
+            paths[idd].add(p);
+          } else {
+            paths[idd] = new paper.Path();
+            paths[idd].strokeColor = colors[color];
+            console.log(paths[idd].strokeColor);
+            paths[idd].add(p);
+          }     
+
+      }
       
-        var p = new paper.Point(x, y);
+      window.addEventListener('devicemotion', motion);
       
-        if (idd in paths) {
-          paths[idd].add(p);
-        } else {
-          paths[idd] = new paper.Path();
-          paths[idd].strokeColor = colors[color];
-          console.log(paths[idd].strokeColor);
-          paths[idd].add(p);
-        }     
+      setInterval(function() {
+        var change = Math.abs(x1-x2+y1-y2+z1-z2);
+
+        if (change > 15) {
+          alert('shake');
+        }
+
+        x2=x1;
+        y2=y1;
+        z2=z1;
+      }, 150);
+      
+      window.addEventListener('deviceorientation',(ev) => {
+        if (event.gamma > 60) {
+          paths[Object.keys(paths)[0]].strokeColor = Math.floor(Math.random()*colors.length);;
+          
+        }
+      });
+
+
+    } else if (size == "small") {
+      var id = Math.random();
+      var path = new paper.Path();
+      var colorindex = Math.floor(Math.random()*colors.length);
+      path.strokeColor = colors[colorindex];
+      
+      
+    
+      tool.onMouseMove = function(event) {
+          // Create a new path every time the mouse is clicked
+          path.add(event.point);
+          var data = {
+            "id": id,
+            "x": event.point.x,
+            "y": event.point.y,
+            "color": colorindex
+          }
+
+          setTimeout(function() { 
+            socket.send(JSON.stringify(data));
+          }, 50);
+
+      }
       
     }
     
