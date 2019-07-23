@@ -70,7 +70,7 @@
           moveCounter = Math.max(0, --moveCounter);
         }
 
-        if(moveCounter > 4) {
+        if(moveCounter > 5) {
           paper.project.activeLayer.removeChildren();
           moveCounter = 0;
         }
@@ -110,26 +110,24 @@
       }
       
       window.addEventListener('devicemotion', motion);
-      
-      setInterval(function() {
-        var change = Math.abs(x1-x2+y1-y2+z1-z2);
 
-        if (change > 15) {
-          alert('shake');
-        }
-
-        x2=x1;
-        y2=y1;
-        z2=z1;
-      }, 150);
-      
+      var hit = false
       window.addEventListener('deviceorientation',(ev) => {
-        if (event.gamma > 60) {
-          paths[Object.keys(paths)[0]].strokeColor = Math.floor(Math.random()*colors.length);;
+        if (ev.gamma > 60) {
+//           window.alert(ev.gamma);
+          hit = true;
+        }
+        if (ev.gamma < 20 && hit == true) {
+          console.log(ev.gamma);
           
+          var key = Object.keys(paths)[0];
+          console.log(key);
+          console.log(paths[key]);
+          paths[key].strokeColor = colors[Math.floor(Math.random()*colors.length)];
+          hit = false;
         }
       });
-
+     
 
     } else if (size == "small") {
       var id = Math.random();
@@ -154,6 +152,8 @@
           }, 50);
 
       }
+      
+      
       
     }
     
