@@ -11,14 +11,32 @@
     <script type="text/javascript" src="{% static 'draw/vendor/paper/paper-full.min.js' %}"></script>
 
     <style type="text/css">
+   
+html,
+body {
+    margin: 0;
+    overflow: hidden;
+    height: 100%;
+}
+
+/* Scale canvas with resize attribute to full size */
+canvas[resize] {
+    width: 100%;
+    height: 100%;
+}
+
     </style>
 
 </head>
 <body>
     <!-- You may change the dimensions of this canvas -->
-    <canvas id="myCanvas" width="750px" height="750px"></canvas>
+    <canvas id="myCanvas" resize></canvas>
+    <img src="../../static/bcourses.png" id = "bcourses">
 </body>
 <script>
+  
+
+  
     var colors = ['red','black', 'blue', 'yellow', 'green', 'orange', 'purple', 'pink']
     var paths = {
       }
@@ -27,64 +45,28 @@
     var canvas = document.getElementById('myCanvas');
     paper.setup(canvas);
     var tool = new paper.Tool();
+  
+    var raster = new paper.Raster({
+      source: "../../static/bcourses.png", //notice here
+      position: paper.view.center
+    });
+    raster.scale(0.35);
 
     // getting the URL (you may want to use for Exercise 3)
     var url = window.location.href;
   
     const params = new URLSearchParams(window.location.search);  
     const size = params.get("size");  
+    const apply = params.get("tool");
+    console.log(apply);
     console.log(size);
   
     var socket = new WebSocket(
         'wss://project3-emilyxiao231877.codeanyapp.com/ws/draw');
       
     //citation: https://www.raymondcamden.com/2017/04/25/using-device-motion-on-the-web
-    let lastX, lastY, lastZ;
-    let moveCounter = 0;
-
-    function motion(e) {
-      let acc = e.acceleration;
-      if(!acc.hasOwnProperty('x')) {
-        acc = e.accelerationIncludingGravity;
-      }
-
-	    if(!acc.x) return;
-  
-      if(Math.abs(acc.x) >= 1 &&
-        Math.abs(acc.y) >= 1 &&
-        Math.abs(acc.z) >=1) {
-        if(!lastX) {
-          lastX = acc.x;
-          lastY = acc.y;
-          lastZ = acc.z;
-          return;
-        }
-
-        let deltaX = Math.abs(acc.x - lastX);
-        let deltaY = Math.abs(acc.y - lastY);
-        let deltaZ = Math.abs(acc.z - lastZ);
-
-        if(deltaX + deltaY + deltaZ > 5) {
-          moveCounter++;
-        } else {
-          moveCounter = Math.max(0, --moveCounter);
-        }
-
-        if(moveCounter > 5) {
-          paper.project.activeLayer.removeChildren();
-          moveCounter = 0;
-        }
-
-        lastX = acc.x;
-        lastY = acc.y;
-        lastZ = acc.z;
-
-      }
-    }
-    
     
     if (size == "large") {
-      
       socket.onmessage = function(received) {
           var got = JSON.parse(received.data);
           console.log(got);
@@ -108,49 +90,53 @@
           }     
 
       }
-      
-      window.addEventListener('devicemotion', motion);
-
-      var hit = false
-      window.addEventListener('deviceorientation',(ev) => {
-        if (ev.gamma > 60) {
-//           window.alert(ev.gamma);
-          hit = true;
-        }
-        if (ev.gamma < 20 && hit == true) {
-          console.log(ev.gamma);
-          
-          var key = Object.keys(paths)[0];
-          console.log(key);
-          console.log(paths[key]);
-          paths[key].strokeColor = colors[Math.floor(Math.random()*colors.length)];
-          hit = false;
-        }
-      });
-     
-
     } else if (size == "small") {
-      var id = Math.random();
-      var path = new paper.Path();
+      var id = Math.random(); 
       var colorindex = Math.floor(Math.random()*colors.length);
-      path.strokeColor = colors[colorindex];
+      var paths = []
       
+      var brushsize;
+      var opacity;
+      if (apply == "highlighter") {
+        //highlighter tool
+        brushsize = 10;
+        opacity = 0.2;
+        
+      } else if (apply == "pen") {
+        //pen tool
+        brushsize = 1;
+        opacity = 1;
+        
+      }
       
+      var path;
+      tool.onMouseDown = function(event) {
+        path = new paper.Path();
+        path.strokeColor = colors[colorindex];
+        path.strokeWidth = brushsize;
+        path.opacity = opacity;
+      }
     
-      tool.onMouseMove = function(event) {
+      tool.onMouseDrag = function(event) {
           // Create a new path every time the mouse is clicked
-          path.add(event.point);
-          var data = {
-            "id": id,
-            "x": event.point.x,
-            "y": event.point.y,
-            "color": colorindex
-          }
+        path.add(event.point);
+//           var data = {
+//             "id": id,
+//             "x": event.point.x,
+//             "y": event.point.y,
+//             "color": colorindex
+//           }
 
-          setTimeout(function() { 
-            socket.send(JSON.stringify(data));
-          }, 50);
+//           setTimeout(function() { 
+//             socket.send(JSON.stringify(data));
+//           }, 50);
 
+      }
+      
+      tool.onMouseUp = function(event) {
+        paths.push(path);
+        console.log(paths);
+        
       }
       
       
