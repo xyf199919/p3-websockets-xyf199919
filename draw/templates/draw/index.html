@@ -7,6 +7,8 @@
     <title>P4 Drawing</title>
 
     <link rel="stylesheet" type="text/css" href="{% static 'draw/vendor/bootstrap/css/bootstrap.min.css' %}">
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.0/css/all.css" integrity="sha384-lZN37f5QGtY3VHgisS14W3ExzMWZxybE1SJSEsQp9S+oqd12jhcu+A56Ebc1zFSJ" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
     <script type="text/javascript" src="{% static 'draw/vendor/jquery/jquery-3.3.1.min.js' %}"></script>
     <script type="text/javascript" src="{% static 'draw/vendor/paper/paper-full.min.js' %}"></script>
 
@@ -20,23 +22,84 @@ body {
 }
 
 /* Scale canvas with resize attribute to full size */
-canvas[resize] {
-    width: 100%;
-    height: 100%;
+
+#myCanvas {
+    padding: 0;
+    margin: auto;
+    display: block;
+    width: 1170px;
+    background-color: #fffcfa;
+background-image: url("https://www.transparenttextures.com/patterns/lined-paper.png");
+		}
+    
+      
+      #redo {
+      color:#eb852d;
+      text-shadow: 2px 2px 4px #000000;
+      cursor: pointer;
+      width: 150px;
+			 background-color: 	#C0C0C0;
+      
+background-image: url("https://www.transparenttextures.com/patterns/brushed-alum.png");
+			display: flex;
+			flex-wrap: wrap;
+			text-align: center;
+      vertical-align: middle;
+      border-radius: 25px;
+      border: 4px solid #eb852d;
+      font-size: x-large;
+       font-weight: bold;
+        margin: 20px;
+        
+        /*shadow credit to https://www.w3schools.com/css/css3_shadows.asp*/
+         box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+    }
+       .child-fake{
+      color:#a5adb0;
+      text-shadow: 2px 2px 4px #000000;
+      cursor: pointer;
+      width: 150px;
+			background-color:#C0C0C0;
+         opacity: 0.8;
+background-image: url("https://www.transparenttextures.com/patterns/brushed-alum.png");
+			display: flex;
+			flex-wrap: wrap;
+			text-align: center;
+      vertical-align: middle;
+      border-radius: 25px;
+      border: 4px solid #a5adb0;
+      font-size: x-large;
+       font-weight: bold;
+        margin: 20px;
+          box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+    }
+      
+      .parent {
+  display: flex;
+
+  flex-wrap: wrap;
+  height: 100%;
+  background-color: #fffcfa;
+background-image: url("https://www.transparenttextures.com/patterns/retina-wood.png");
 }
 
     </style>
-
+<title>The Same Page</title>
 </head>
 <body>
     <!-- You may change the dimensions of this canvas -->
-    <canvas id="myCanvas" resize></canvas>
-    <img src="../../static/bcourses.png" id = "bcourses">
+<div class= "parent">
+  <div class= "child">
+      <canvas id="myCanvas" ></canvas>
+  </div>  
+  
+  <div class= "child" id="redo"> &nbsp UNDO  <i class="fas fa-undo-alt" ></i> &nbsp</div>
+  <div class= "child-fake" id="new"> &nbsp NEW &nbsp <i class="fas fa-file-upload"></i> &nbsp</div>
+  <div class= "child-fake" id="save"> &nbsp SAVE &nbsp  <i class="fas fa-file-download"></i> &nbsp</div>
+  </div>
 </body>
+  
 <script>
-  
-
-  
     var colors = ['red','black', 'blue', 'yellow', 'green', 'orange', 'purple', 'pink'];
     var colorindex = Math.floor(Math.random()*colors.length);
     // identifying each user
@@ -48,6 +111,14 @@ canvas[resize] {
     
     // setting up the canvas and one paper tool
     var canvas = document.getElementById('myCanvas');
+    if (canvas.getContext) {
+      var ctx = canvas.getContext('2d');
+      ctx.shadowColor = "red";
+      ctx.shadowBlur = 6;
+      ctx.shadowOffsetX = 6;
+      ctx.shadowOffsetY = 6;
+    }
+
     paper.setup(canvas);
     var tool = new paper.Tool();
   
@@ -55,7 +126,7 @@ canvas[resize] {
       source: "../../static/bcourses.png", //notice here
       position: paper.view.center
     });
-    raster.scale(0.35);
+    raster.scale(0.34);
 
     // getting the URL (you may want to use for Exercise 3)
     var url = window.location.href;
@@ -66,43 +137,83 @@ canvas[resize] {
     console.log(apply);
     console.log(size);
   
+    //shake to clear feature
+  window.addEventListener('devicemotion', (e)=> {
+    if (Math.abs(e.acceleration.x)>20 && Math.abs(e.acceleration.y)>20){
+      location.reload();
+    }
+  });
+  
     var socket = new WebSocket(
         'wss://project3-emilyxiao231877.codeanyapp.com/ws/draw');
       
     //citation: https://www.raymondcamden.com/2017/04/25/using-device-motion-on-the-web
     
+    //redo function
+    
     if (size == "large") {
       socket.onmessage = function(received) {
           let d = JSON.parse(received.data);
-          let c = colors[d['color']];
-          let w = d['width'];
-          let p = new paper.Point(d['x'], d['y']);
-
-          if (d['user'] in users) {
-            if(d['new'] == 0){
-            users[d['user']][users[d['user']].length - 1].add(p);
-            }else{
-            newpath = new paper.Path();
-            newpath.add(p);
-            newpath.strokeColor = c;
-            newpath.strokeWidth = w;
-            newpath.opacity = d['opacity'];
-            users[d['user']].push(newpath);
-            }
+        
+          if (d['undo'] == 1) {
+            let undo_id = d['user'];
+            //users[undo_id] == userpaths list
+            let removed = users[undo_id].pop();
+            removed.remove();
+            
           } else {
-            // assign a new userpath to the new user
-            users[d['user']]= [];
-            newpath = new paper.Path();
-            newpath.add(p);
-            newpath.strokeColor = c;
-            newpath.strokeWidth = w;
-            newpath.opacity = d['opacity'];
-            users[d['user']].push(newpath);
-           
-          }     
+            let c = colors[d['color']];
+            let w = d['width'];
+            let p = new paper.Point(d['x'], d['y']);
+
+            if (d['user'] in users) {
+              if(d['new'] == 0){
+              users[d['user']][users[d['user']].length - 1].add(p);
+              }else{
+              newpath = new paper.Path();
+              newpath.add(p);
+              newpath.strokeColor = c;
+              newpath.strokeWidth = w;
+              newpath.opacity = d['opacity'];
+              users[d['user']].push(newpath);
+              }
+            } else {
+              // assign a new userpath to the new user
+              users[d['user']]= [];
+              newpath = new paper.Path();
+              newpath.add(p);
+              newpath.strokeColor = c;
+              newpath.strokeWidth = w;
+              newpath.opacity = d['opacity'];
+              users[d['user']].push(newpath);
+
+            } 
+          }
 
       }
+      //!!!!!!!!!!!!!!!small
     } else if (size == "small") {
+      //redo function
+      document.getElementById("redo").onclick = function() {
+        console.log("clicked");
+        let removed = userpaths.pop();
+        removed.remove();
+        if (typeof path !== 'undefined') {
+          path.remove();
+        }
+        
+        let message = {
+          user: user,
+          new: 0,
+          undo: 1
+        };
+        setTimeout(()=>{
+          socket.send(JSON.stringify(message));
+        }, 500);
+        
+      
+      };
+
       var brushsize;
       var opacity;
       if (apply == "highlighter") {
@@ -146,19 +257,20 @@ canvas[resize] {
         userpaths[userpaths.length - 1] = path;
         users[user] = userpaths;
         
-         let message = {
+        let message = {
           x: event.point.x,
           y: event.point.y,
           user: user,
           color: colorindex,
           width: brushsize,
           opacity: opacity,
-          new: 0
+          new: 0,
+          undo: 0
         };
         setTimeout(()=>{
       // send message to the server
-      socket.send(JSON.stringify(message));
-    }, 500);
+          socket.send(JSON.stringify(message));
+        }, 500);
 //           var data = {
 //             "id": id,
 //             "x": event.point.x,
@@ -173,7 +285,7 @@ canvas[resize] {
       }
      
       tool.onMouseUp = function(event) {
-        userpaths.push(path);
+//         userpaths.push(path);
         console.log(userpaths);
       
 
