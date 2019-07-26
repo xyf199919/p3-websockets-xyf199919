@@ -27,7 +27,7 @@ body {
     padding: 0;
     margin: auto;
     display: block;
-    width: 1170px;
+    width: 1000px;
     background-color: #fffcfa;
 background-image: url("https://www.transparenttextures.com/patterns/lined-paper.png");
 		}
@@ -90,7 +90,7 @@ background-image: url("https://www.transparenttextures.com/patterns/retina-wood.
     <!-- You may change the dimensions of this canvas -->
 <div class= "parent">
   <div class= "child">
-      <canvas id="myCanvas" ></canvas>
+      <canvas id="myCanvas"></canvas>
   </div>  
   
   <div class= "child" id="redo"> &nbsp UNDO  <i class="fas fa-undo-alt" ></i> &nbsp</div>
@@ -100,7 +100,7 @@ background-image: url("https://www.transparenttextures.com/patterns/retina-wood.
 </body>
   
 <script>
-    var colors = ['red','black', 'blue', 'yellow', 'green', 'orange', 'purple', 'pink'];
+    var colors = ['red', 'blue', 'green', 'orange', 'purple'];
     var colorindex = Math.floor(Math.random()*colors.length);
     // identifying each user
     var user = Math.floor(Math.random() * 100) + 1;
