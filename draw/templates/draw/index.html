@@ -37,10 +37,15 @@ canvas[resize] {
   
 
   
-    var colors = ['red','black', 'blue', 'yellow', 'green', 'orange', 'purple', 'pink']
-    var paths = {
-      }
-
+    var colors = ['red','black', 'blue', 'yellow', 'green', 'orange', 'purple', 'pink'];
+    var colorindex = Math.floor(Math.random()*colors.length);
+    // identifying each user
+    var user = Math.floor(Math.random() * 100) + 1;
+    // collecting the paths for one user 
+    var userpaths = [];
+    // collecting the paths for all users using id - paths pairs
+    var users = {user: userpaths};
+    
     // setting up the canvas and one paper tool
     var canvas = document.getElementById('myCanvas');
     paper.setup(canvas);
@@ -68,33 +73,36 @@ canvas[resize] {
     
     if (size == "large") {
       socket.onmessage = function(received) {
-          var got = JSON.parse(received.data);
-          console.log(got);
+          let d = JSON.parse(received.data);
+          let c = colors[d['color']];
+          let w = d['width'];
+          let p = new paper.Point(d['x'], d['y']);
 
-          var idd = JSON.parse(got["id"]);
-          console.log(idd);
-
-          var x = JSON.parse(got["x"]);
-          var y = JSON.parse(got["y"]);
-          var color = JSON.parse(got["color"]);
-
-          var p = new paper.Point(x, y);
-
-          if (idd in paths) {
-            paths[idd].add(p);
+          if (d['user'] in users) {
+            if(d['new'] == 0){
+            users[d['user']][users[d['user']].length - 1].add(p);
+            }else{
+            newpath = new paper.Path();
+            newpath.add(p);
+            newpath.strokeColor = c;
+            newpath.strokeWidth = w;
+            newpath.opacity = d['opacity'];
+            users[d['user']].push(newpath);
+            }
           } else {
-            paths[idd] = new paper.Path();
-            paths[idd].strokeColor = colors[color];
-            console.log(paths[idd].strokeColor);
-            paths[idd].add(p);
+            // assign a new userpath to the new user
+            users[d['user']]= [];
+            newpath = new paper.Path();
+            newpath.add(p);
+            newpath.strokeColor = c;
+            newpath.strokeWidth = w;
+            newpath.opacity = d['opacity'];
+            users[d['user']].push(newpath);
+           
           }     
 
       }
     } else if (size == "small") {
-      var id = Math.random(); 
-      var colorindex = Math.floor(Math.random()*colors.length);
-      var paths = []
-      
       var brushsize;
       var opacity;
       if (apply == "highlighter") {
@@ -108,18 +116,49 @@ canvas[resize] {
         opacity = 1;
         
       }
-      
       var path;
       tool.onMouseDown = function(event) {
         path = new paper.Path();
         path.strokeColor = colors[colorindex];
         path.strokeWidth = brushsize;
         path.opacity = opacity;
+        userpaths.push(path);
+        users[user] = userpaths;
+       
+        let message = {
+          x: event.point.x,
+          y: event.point.y,
+          user: user,
+          color: colorindex,
+          width: brushsize,
+          opacity: opacity,
+          new: 1
+        };
+        setTimeout(()=>{
+      // send message to the server
+      socket.send(JSON.stringify(message));
+    }, 500);
       }
-    
+  
       tool.onMouseDrag = function(event) {
           // Create a new path every time the mouse is clicked
         path.add(event.point);
+        userpaths[userpaths.length - 1] = path;
+        users[user] = userpaths;
+        
+         let message = {
+          x: event.point.x,
+          y: event.point.y,
+          user: user,
+          color: colorindex,
+          width: brushsize,
+          opacity: opacity,
+          new: 0
+        };
+        setTimeout(()=>{
+      // send message to the server
+      socket.send(JSON.stringify(message));
+    }, 500);
 //           var data = {
 //             "id": id,
 //             "x": event.point.x,
@@ -132,11 +171,12 @@ canvas[resize] {
 //           }, 50);
 
       }
-      
+     
       tool.onMouseUp = function(event) {
-        paths.push(path);
-        console.log(paths);
-        
+        userpaths.push(path);
+        console.log(userpaths);
+      
+
       }
       
       
